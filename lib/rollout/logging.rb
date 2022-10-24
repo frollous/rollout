@@ -60,34 +60,36 @@ class Rollout
 
       def updated_at(feature_name)
         storage_key = events_storage_key(feature_name)
-        _, score = @storage.zrange(storage_key, 0, 0, with_scores: true).first
+        _, score = @storage.then { |conn| conn.zrange(storage_key, 0, 0, with_scores: true).first }
         Time.at(-score.to_f / 1_000_000) if score
       end
 
       def last_event(feature_name)
         storage_key = events_storage_key(feature_name)
-        value = @storage.zrange(storage_key, 0, 0, with_scores: true).first
+        value = @storage.then { |conn| conn.zrange(storage_key, 0, 0, with_scores: true).first }
         Event.from_raw(*value) if value
       end
 
       def events(feature_name)
         storage_key = events_storage_key(feature_name)
-        @storage
-          .zrange(storage_key, 0, -1, with_scores: true)
-          .map { |v| Event.from_raw(*v) }
-          .reverse
+        @storage.then do |conn| conn
+          conn.zrange(storage_key, 0, -1, with_scores: true)
+              .map { |v| Event.from_raw(*v) }
+              .reverse
+        end
       end
 
       def global_events
-        @storage
-          .zrange(global_events_storage_key, 0, -1, with_scores: true)
-          .map { |v| Event.from_raw(*v) }
-          .reverse
+        @storage.then do |conn| conn
+          conn.zrange(global_events_storage_key, 0, -1, with_scores: true)
+              .map { |v| Event.from_raw(*v) }
+              .reverse
+        end
       end
 
       def delete(feature_name)
         storage_key = events_storage_key(feature_name)
-        @storage.del(storage_key)
+        @storage.then { |conn| conn..del(storage_key) }
       end
 
       def update(before, after)
@@ -125,12 +127,14 @@ class Rollout
 
         storage_key = events_storage_key(after.name)
 
-        @storage.zadd(storage_key, -event.timestamp, event.serialize)
-        @storage.zremrangebyrank(storage_key, @history_length, -1)
+        @storage.then do |conn|
+          conn.zadd(storage_key, -event.timestamp, event.serialize)
+          conn.zremrangebyrank(storage_key, @history_length, -1)
 
-        if @global
-          @storage.zadd(global_events_storage_key, -event.timestamp, event.serialize)
-          @storage.zremrangebyrank(global_events_storage_key, @history_length, -1)
+          if @global
+            conn.zadd(global_events_storage_key, -event.timestamp, event.serialize)
+            conn.zremrangebyrank(global_events_storage_key, @history_length, -1)
+          end
         end
       end
 

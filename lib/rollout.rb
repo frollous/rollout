@@ -38,10 +38,12 @@ class Rollout
   end
 
   def delete(feature)
-    features = (@storage.get(features_key) || '').split(',')
-    features.delete(feature.to_s)
-    @storage.set(features_key, features.join(','))
-    @storage.del(key(feature))
+    @storage.then do |conn|
+      features = (conn.get(features_key) || '').split(',')
+      features.delete(feature.to_s)
+      conn.set(features_key, features.join(','))
+      conn.del(key(feature))
+    end
 
     if respond_to?(:logging)
       logging.delete(feature)
@@ -137,7 +139,7 @@ class Rollout
   end
 
   def get(feature)
-    string = @storage.get(key(feature))
+    string = @storage.then { |conn| conn.get(key(feature)) }
     Feature.new(feature, state: string, rollout: self, options: @options)
   end
 
@@ -158,16 +160,17 @@ class Rollout
 
     feature_keys = features.map { |feature| key(feature) }
 
-    @storage
-      .mget(*feature_keys)
-      .map
-      .with_index do |string, index|
-        Feature.new(features[index], state: string, rollout: self, options: @options)
+    @storage.then do |conn|
+      conn.mget(*feature_keys)
+       .map
+       .with_index do |string, index|
+         Feature.new(features[index], state: string, rollout: self, options: @options)
       end
+    end
   end
 
   def features
-    (@storage.get(features_key) || '').split(',').map(&:to_sym)
+    (@storage.then { |conn| conn.get(features_key) } || '').split(',').map(&:to_sym)
   end
 
   def feature_states(user = nil)
@@ -185,19 +188,21 @@ class Rollout
   def clear!
     features.each do |feature|
       with_feature(feature, &:clear)
-      @storage.del(key(feature))
+      @storage.then { |conn| conn.del(key(feature)) }
     end
 
-    @storage.del(features_key)
+    @storage.then { |conn| conn.del(features_key) }
   end
 
   def exists?(feature)
     # since redis-rb v4.2, `#exists?` replaces `#exists` which now returns integer value instead of boolean
     # https://github.com/redis/redis-rb/pull/918
-    if @storage.respond_to?(:exists?)
-      @storage.exists?(key(feature))
-    else
-      @storage.exists(key(feature))
+    @storage.then do |conn|
+      if conn.respond_to?(:exists?)
+        conn.exists?(key(feature))
+      else
+        conn.exists(key(feature))
+      end
     end
   end
 
@@ -227,7 +232,9 @@ class Rollout
   end
 
   def save(feature)
-    @storage.set(key(feature.name), feature.serialize)
-    @storage.set(features_key, (features | [feature.name.to_sym]).join(','))
+    @storage.then do |conn|
+      conn.set(key(feature.name), feature.serialize)
+      conn.set(features_key, (features | [feature.name.to_sym]).join(','))
+    end
   end
 end
