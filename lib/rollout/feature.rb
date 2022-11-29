@@ -52,9 +52,9 @@ class Rollout
     def active?(user)
       if user
         id = user_id(user)
-        user_in_percentage?(id) ||
-          user_in_active_users?(id) ||
-          user_in_active_group?(user)
+        user_in_active_group?(user) ||
+          user_in_percentage?(id) ||
+          user_in_active_users?(id)
       else
         @percentage == 100
       end
@@ -69,12 +69,12 @@ class Rollout
         percentage: @percentage,
         groups: @groups,
         users: @users,
-        data: @data,
+        data: @data
       }
     end
 
     def deep_clone
-      c = self.clone
+      c = clone
       c.instance_variable_set('@rollout', nil)
       c = Marshal.load(Marshal.dump(c))
       c.instance_variable_set('@rollot', @rollout)
