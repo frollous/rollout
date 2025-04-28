@@ -140,4 +140,3 @@ RSpec.describe 'Rollout::Logging' do
     end
   end
 end
-

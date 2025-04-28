@@ -3,49 +3,55 @@ version: 2.1
 workflows:
   main:
     jobs:
+      - ruby33
+      - ruby31
+      - ruby32
+      - ruby30
       - ruby27
       - ruby26
       - ruby25
       - ruby24
-      - ruby23
 
 executors:
+  ruby33:
+    docker:
+      - image: cimg/ruby:3.3
+      - image: cimg/redis:7.2
+  ruby32:
+    docker:
+      - image: cimg/ruby:3.2
+      - image: cimg/redis:7.2
+  ruby31:
+    docker:
+      - image: cimg/ruby:3.1
+      - image: cimg/redis:7.2
+  ruby30:
+    docker:
+      - image: cimg/ruby:3.0
+      - image: cimg/redis:7.2
   ruby27:
     docker:
-      - image: circleci/ruby:2.7
-      - image: circleci/redis:alpine
+      - image: cimg/ruby:2.7
+      - image: cimg/redis:7.2
   ruby26:
     docker:
-      - image: circleci/ruby:2.6
-      - image: circleci/redis:alpine
+      - image: cimg/ruby:2.7
+      - image: cimg/redis:7.2
   ruby25:
     docker:
-      - image: circleci/ruby:2.5
-      - image: circleci/redis:alpine
+      - image: cimg/ruby:2.7
+      - image: cimg/redis:7.2
   ruby24:
     docker:
-      - image: circleci/ruby:2.4
-      - image: circleci/redis:alpine
-  ruby23:
-    docker:
-      - image: circleci/ruby:2.3
-      - image: circleci/redis:alpine
+      - image: cimg/ruby:2.4
+      - image: cimg/redis:7.2
 
 commands:
   test:
     steps:
-      - restore_cache:
-          keys:
-            - bundler-{{ checksum "Gemfile.lock" }}
-
       - run:
           name: Bundle Install
           command: bundle check --path vendor/bundle || bundle install
-
-      - save_cache:
-          key: bundler-{{ checksum "Gemfile.lock" }}
-          paths:
-            - vendor/bundle
 
       - run:
           name: Run rspec
@@ -53,8 +59,8 @@ commands:
             bundle exec rspec --format documentation --format RspecJunitFormatter --out test_results/rspec.xml
 
 jobs:
-  ruby27:
-    executor: ruby27
+  ruby33:
+    executor: ruby33
     steps:
       - checkout
       - test
@@ -70,26 +76,44 @@ jobs:
       - store_test_results:
           path: test_results
 
+  ruby32:
+    executor: ruby30
+    steps:
+      - checkout
+      - test
+
+  ruby31:
+    executor: ruby30
+    steps:
+      - checkout
+      - test
+
+  ruby30:
+    executor: ruby30
+    steps:
+      - checkout
+      - test
+
+  ruby27:
+    executor: ruby27
+    steps:
+      - checkout
+      - test
+
   ruby26:
-    executor: ruby26
+    executor: ruby27
     steps:
       - checkout
       - test
 
   ruby25:
-    executor: ruby25
+    executor: ruby27
     steps:
       - checkout
       - test
 
   ruby24:
     executor: ruby24
-    steps:
-      - checkout
-      - test
-
-  ruby23:
-    executor: ruby23
     steps:
       - checkout
       - test
