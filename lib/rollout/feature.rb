@@ -52,8 +52,8 @@ class Rollout
     def active?(user)
       if user
         id = user_id(user)
-        user_in_active_group?(user) ||
-          user_in_percentage?(id) ||
+        user_in_percentage?(id) ||
+          user_in_active_group?(user) ||
           user_in_active_users?(id)
       else
         @percentage == 100
@@ -96,6 +96,8 @@ class Rollout
     end
 
     def user_in_percentage?(user)
+      return true if @percentage == 100
+
       Zlib.crc32(user_id_for_percentage(user)) < RAND_BASE * @percentage
     end
 
