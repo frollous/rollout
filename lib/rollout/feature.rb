@@ -52,8 +52,8 @@ class Rollout
     def active?(user)
       if user
         id = user_id(user)
-        user_in_active_group?(user) ||
-          user_in_percentage?(id) ||
+        user_in_percentage?(id) ||
+          user_in_active_group?(user) ||
           user_in_active_users?(id)
       else
         @percentage == 100
@@ -74,7 +74,7 @@ class Rollout
     end
 
     def deep_clone
-      c = clone
+      c = self.clone
       c.instance_variable_set('@rollout', nil)
       c = Marshal.load(Marshal.dump(c))
       c.instance_variable_set('@rollot', @rollout)
@@ -96,6 +96,8 @@ class Rollout
     end
 
     def user_in_percentage?(user)
+      return true if @percentage == 100
+
       Zlib.crc32(user_id_for_percentage(user)) < RAND_BASE * @percentage
     end
 

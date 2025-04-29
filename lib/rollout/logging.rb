@@ -40,6 +40,7 @@ class Rollout
           name: @name,
           data: @data,
           context: @context,
+          created_at: @created_at
         )
       end
 
@@ -89,7 +90,7 @@ class Rollout
 
       def delete(feature_name)
         storage_key = events_storage_key(feature_name)
-        @storage.then { |conn| conn..del(storage_key) }
+        @storage.then { |conn| conn.del(storage_key) }
       end
 
       def update(before, after)
