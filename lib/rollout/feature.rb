@@ -96,9 +96,14 @@ class Rollout
     end
 
     def user_in_percentage?(user)
-      return true if @percentage == 100
-
-      Zlib.crc32(user_id_for_percentage(user)) < RAND_BASE * @percentage
+      case @percentage
+      when 100
+        true
+      when 0
+        false
+      else
+        Zlib.crc32(user_id_for_percentage(user)) < RAND_BASE * @percentage
+      end
     end
 
     def user_id_for_percentage(user)
